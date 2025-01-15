@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String        @id @default(cuid()) // Unique user ID
+  email            String        @unique
+  password         String
+  fullName         String
+  phoneNumber      String        @unique
+  address          String
+  dateOfBirth      DateTime
+  profilePicture   String? // Optional: link to the profile picture
+  role             String        @default("user") // User's role, default is 'user'
+  emailVerified    Boolean       @default(false)
+  twoFactorEnabled Boolean       @default(false)
+  kycStatus        String        @default("pending") // 'pending', 'verified', 'failed'
+  accountStatus    String        @default("active") // 'active', 'suspended'
+  creditScore      Int? // Optional, based on credit check
+  transactionLimit Float         @default(10000) // Max amount for daily transactions
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  lastLogin        DateTime? // Timestamp of last login
+  loginAttempts    Int           @default(0) // Failed login attempts
+  lockedUntil      DateTime? // Timestamp until the account is locked
+  accounts         Account[]
+  transactions     Transaction[]
+}
+
+model Account {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  balance       Int           @default(0)
+  accountNumber String        @unique
+  currency      String        @default("USD")
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  lastUpdated   DateTime? // Timestamp of last update
+  accountType   AccountType
+  transactions  Transaction[]
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  userId          String
+  accountId       String
+  transactionType TransactionType
+  amount          Int               @default(0)
+  description     String?
+  toAccountId     String?
+  fromAccountId   String?
+  currency        String            @default("USD")
+  status          TransactionStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User              @relation(fields: [userId], references: [id])
+  account         Account           @relation(fields: [accountId], references: [id])
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
